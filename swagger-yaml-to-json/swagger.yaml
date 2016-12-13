@@ -1,0 +1,1835 @@
+swagger: '2.0'
+info:
+  title: Skeppare API
+  description: Skeppare Container Service 0.1 API
+  version: "0.1.0"
+
+host: skeppare.us-az-phoenix-1.oracleiaas.com
+
+schemes:
+  - https
+
+basePath: /
+
+produces:
+  - application/json
+consumes:
+  - application/json
+
+parameters:
+  limit:
+    name: limit
+    in: query
+    description: Max number of results to be returned
+    type: integer
+    default: 50
+  offset:
+    name: offset
+    in: query
+    description: Offset into list of results to start returning.
+    type: integer
+    default: 0
+  search:
+    name: search
+    in: query
+    type: string
+    description: Search by name
+  poolId:
+    name: poolId
+    in: query
+    description: Filter by capacity pool
+    required: false
+    type: string
+    format: uuid
+  appId:
+    name: appId
+    in: query
+    description: Filter by app
+    required: false
+    type: string
+    format: uuid
+  serviceId:
+    name: serviceId
+    in: query
+    description: Filter by service
+    required: false
+    type: string
+    format: uuid
+  revision:
+    name: Revision
+    in: query
+    description: Specify the revision number at which to query for an object.
+    type: integer
+  upToCurrent:
+    name: upToCurrent
+    in: query
+    type: boolean
+    default: false
+    description: |
+      If true, the event stream will begin at the designated starting
+      revision and stream all events up to the current time and then the
+      WebSocket will be closed.
+
+paths:
+  /:
+    get:
+      summary: Find current version of API.
+      description: Redirects to the current version of the API.
+      tags:
+        - Root
+      responses:
+        307:
+          description: Redirect to v1 endpoint.
+  /v1:
+    get:
+      summary: Fetch a tenant.
+      description: Fetches the information about a tenant.
+      tags:
+        - Tenant
+      responses:
+        200:
+          description: The tenant object!
+          schema:
+            $ref: "#/definitions/Tenant"
+    post:
+      summary: Opt-in to container service.
+      description: |
+        Opts the tenant into the Skeppare service. This must be called by the
+        tenant before the service will be operable for them. Otherwise all
+        operations return 401.
+      tags:
+        - Tenant
+      responses:
+        202:
+          description: The tenant is opted in, APIs under /v1 become operable.
+    delete:
+      summary: Opt-out from container service.
+      description: |
+        Opts the tenant out of the Skeppare service. All managed resources
+        created by Skeppare must be deleted (e.g. all the tenant's apps,
+        instances, and volumes must have been removed already).
+
+        403 means managed resources (apps, instances, or volumes) exist in the
+        Skeppare service. The user must manually delete any resources before
+        this request will succeed.
+      tags:
+        - Tenant
+      responses:
+        202:
+          description: Tenant opts out, APIs under /v1 become inoperable.
+        403:
+          description: Managed resources still exist.
+
+  # Pools
+  /v1/pools:
+    get:
+      summary: List capacity pools.
+      description: Get a list of capacity pools.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/offset"
+        - $ref: "#/parameters/search"
+      tags:
+        - Capacity Pools
+      responses:
+        200:
+          description: An array of capacity pools
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/CapacityPool'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: Create new capacity pool.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: |
+                  Name of the capacity pool. Must be unique across all
+                  capacity pools.
+      consumes:
+        - application/json
+      tags:
+        - Capacity Pools
+      responses:
+        200:
+          description: The newly created capacity pool.
+          schema:
+              $ref: '#/definitions/CapacityPool'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/pools/{id}:
+    get:
+      summary: Get a Capacity Pool.
+      description: |
+        Get a particular capacity pool by ID.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      tags:
+        - Capacity Pools
+      responses:
+        200:
+          description: A capacity pool
+          schema:
+              $ref: '#/definitions/CapacityPool'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/pools/{id}/events:
+    get:
+      summary: Open the event stream for a Capacity Pool.
+      description: |
+        Open the event stream for the Capacity Pool. The GET must allow HTTP
+        upgrade to the WebSocket protocol. Once upgraded all events that happen
+        in this capacity pool will be streamed to the client as a series of JSON
+        objects. Use parameter "upToCurrent" to control whether to stream
+        indefinitely or only until the stream is caught up to the current time.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - $ref: "#/parameters/upToCurrent"
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      tags:
+        - Capacity Pools
+      responses:
+        200:
+          description: |
+            The connection will be upgraded to a WebSocket and events that happen
+            in the pool will be sent as serialized JSON objects. Please see the
+            accompanying text for a reference for the objects that may be sent.
+          schema:
+            type: string
+            format: binary
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+  /v1/instances:
+    get:
+      summary: List compute instances.
+      description: |
+        Fetch a list of instances. Optionally filter by owning capacity pool.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/offset"
+        - $ref: "#/parameters/search"
+        - $ref: "#/parameters/poolId"
+      tags:
+        - Instances
+      responses:
+        200:
+          description: A list of instances
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Instance"
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: Manage a compute instance.
+      description: |
+        Place a compute instance under management of the container service in a
+        capacity pool. Once under management the container service will
+        provision networks, attach and detach networks and disks, and schedule
+        work on to the instance.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/InstanceManageRequest'
+      consumes:
+        - application/json
+      tags:
+        - Instances
+      responses:
+        202:
+          description: The request has been accepted but not yet completed.
+          schema:
+            $ref: ''#/definitions/InstanceManageResponse'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/instances/{id}:
+    get:
+      summary: Get a single compute instance.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - name: id
+          type: string
+          in: path
+          required: true
+          format: uuid
+          description: The id for an instance
+      tags:
+        - Instances
+      responses:
+        200:
+          description: The compute instance
+          schema:
+            $ref: "#/definitions/Instance"
+        202:
+          description: |
+            The instance was recently launched but it doesn't exist yet. Retry
+            later to see if it exists yet.
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Unmanage a compute instance.
+      description: |
+        Tells the container service to unmanage a compute instance that was
+        previously managed.
+      parameters:
+        - name: id
+          type: string
+          in: path
+          required: true
+          format: uuid
+          description: The id for an instance
+      tags:
+        - Instances
+      responses:
+        202:
+          description: Instance release has been queued.
+        404:
+          description: Instance Not Found
+          schema:
+            $ref: '#/definitions/Error'
+
+  /v1/subnets:
+    get:
+      summary: List subnets.
+      description: List subnets, optionally filtering by capacity pool
+      parameters:
+        - $ref: "#/parameters/revision"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/offset"
+        - $ref: "#/parameters/search"
+        - $ref: "#/parameters/poolId"
+          required: true
+      tags:
+        - Subnets
+      responses:
+        200:
+          description: A list of subnets
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Subnet'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: Manage a subnet.
+      description: |
+        Place a subnet under the under management of the container service in a
+        capacity pool.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/SubnetCreate'
+      consumes:
+        - application/json
+      tags:
+        - Subnets
+      responses:
+        202:
+          description: The request has been accepted but not yet completed.
+          schema:
+            $ref: "#/definitions/Subnet"
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/subnets/{id}:
+    get:
+      summary: Get a single subnet
+      parameters:
+        - $ref: "#/parameters/revision"
+        - name: id
+          type: string
+          in: path
+          required: true
+          format: uuid
+          description: The id for a subnet
+      tags:
+        - Subnets
+      responses:
+        200:
+          description: The subnet instance
+          schema:
+            $ref: "#/definitions/Subnet"
+        202:
+          description: |
+            The subnet was recently launched but it doesn't exist yet. Retry
+            later to see if it exists yet.
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Unmanage a subnet.
+      description: |
+        Tells the container service to unmanage a compute instance that was
+        previously managed. The container service will no longer update the
+        routing rules in the subnet or create/remove any resources attached to
+        the subnet.
+      parameters:
+        - name: id
+          type: string
+          in: path
+          required: true
+          format: uuid
+          description: The id of the subnet
+      tags:
+        - Subnets
+      responses:
+        202:
+          description: Subnet release has been queued.
+        404:
+          description: Subnet Not Found
+          schema:
+            $ref: '#/definitions/Error'
+
+  /v1/services:
+    get:
+      summary: List services.
+      description: List services, optionally filtering by capacity pool.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/offset"
+        - $ref: "#/parameters/search"
+        - $ref: "#/parameters/poolId"
+      tags:
+        - Services
+      responses:
+        200:
+          description: An array of Services
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Service'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: Create new service.
+      description: Create new service under a capacity pool.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CreateServiceReq'
+      consumes:
+        - application/json
+      tags:
+        - Services
+      responses:
+        200:
+          description: The newly created service.
+          schema:
+            $ref: '#/definitions/ServiceCreatedResp'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/services/{id}:
+    get:
+      summary: Get a single service.
+      description: Get a single service
+      parameters:
+        - $ref: "#/parameters/revision"
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      tags:
+        - Services
+      responses:
+        200:
+          description: The service
+          schema:
+            $ref: "#/definitions/Service"
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    put:
+      summary: Update a service.
+      description: |
+        Update the properties of a service. Any properties omitted in the body
+        are left unchanged. Use this to scale a service's number of replicas up
+        and down.
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Service'
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      consumes:
+        - application/json
+      tags:
+        - Services
+      responses:
+        200:
+          description: The updated service.
+          schema:
+            $ref: '#/definitions/Service'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a service.
+      description: |
+        Destroys the service. All running replicas of the service are stopped
+        and any resources that were allocated to run this service are removed.
+      parameters:
+        - name: id
+          type: string
+          in: path
+          required: true
+          format: uuid
+          description: The id of the service
+      tags:
+        - Services
+      responses:
+        202:
+          description: Service destruction has been queued.
+        404:
+          description: Service Not Found
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/services/{id}/events:
+    get:
+      summary: Open the event stream for a Service.
+      description: |
+        Open the event stream for the Service. The GET must allow HTTP
+        upgrade to the WebSocket protocol. Once upgraded all events that happen
+        in this service will be streamed to the client as a series of JSON
+        objects. Use parameter "upToCurrent" to control whether to stream
+        indefinitely or only until the stream is caught up to the current time.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - $ref: "#/parameters/upToCurrent"
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+      consumes:
+        - application/json
+      tags:
+        - Services
+      responses:
+        200:
+          description: |
+            The connection will be upgraded to a WebSocket and events that
+            happen in the pool will be sent as serialized JSON objects. Please
+            see the accompanying text for a reference for the objects that may
+            be sent.
+          schema:
+            type: string
+            format: binary
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+  /v1/agents:
+    get:
+      summary: List agents.
+      description: |
+       Get a list of agents. Agents check-in to the service and may be assigned
+       to a Capacity Pool. Once assigned, work may be scheduled on the node
+       managed by an agent.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - $ref: "#/parameters/limit"
+        - $ref: "#/parameters/offset"
+      tags:
+        - Agents
+      responses:
+        200:
+          description: A list of agents.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/AgentInPool'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/agents/{id}:
+    get:
+      summary: Get a single agent.
+      parameters:
+        - $ref: "#/parameters/revision"
+        - name: id
+          type: string
+          in: path
+          required: true
+          format: uuid
+          description: The id for an instance
+      tags:
+        - Agents
+      responses:
+        200:
+          description: The agent
+          schema:
+            $ref: '#/definitions/AgentInPool'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    put:
+      summary: Assign an Agent to a Capacity Pool.
+      description: |
+        Update the properties of an Agent. Any properties omitted in the body
+        are left unchanged. Use this to change the pool that an Agent is
+        assigned to or unassign an Agent from a pool altogether.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: uuid
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AgentInPool'
+      consumes:
+        - application/json
+      tags:
+        - Agents
+      responses:
+        200:
+          description: The updated service.
+          schema:
+            $ref: '#/definitions/Service'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /v1/agents/checkin:
+    get:
+      summary: Check-In for Agents.
+      description: |
+        Perform Agent check-in and start the agent event stream. When an Agent
+        is ready to begin accepting work it should perform a GET to this URL to
+        begin the check-in process. The GET must allow HTTP upgrade to the
+        WebSocket protocol.
+
+        Once upgraded the Agent must send the "CheckIn" message telling the
+        service about the available resources (disk, RAM, cpu, networks) on
+        the compute instance. If the check-in is successful the service will
+        acknowledge by sending the AgentSnapshot message followed by the Agent's
+        event stream.
+
+        The AgentSnapshot message contains all information the Agent needs to
+        catch up with the rest of the Capcity Pool, including services available
+        in the pool and also any container placement requests that the Agent
+        should fulfill.
+
+        The Agent's event stream contains all the events described in the
+        pool event stream (/v1/pools/{id}/events) with additional Agent-specific
+        events such as placement requests and health checks. The additional
+        events that Agents may see are the HealthCheck, AgentUpgrade, and
+        AgentSnapshot events.
+
+        All messages are sent as JSON objects over the WebSocket connection.
+        Upon successful upgrade the connection is held open indefinitely.
+      consumes:
+        - application/json
+      tags:
+        - Agents
+      responses:
+        200:
+          description: |
+            The connection will be upgraded to a WebSocket and events that
+            happen in the pool will be sent as serialized JSON objects. Please
+            see the accompanying text for a reference for the objects that may
+            be sent. The connection is held open indefinitely.
+          schema:
+            type: string
+            format: binary
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+  /v1/cellophane:
+    get:
+      summary: Download an Agent software package.
+      description: |
+        Download the Agent software package. This is for internal-use of the
+        container service.
+      parameters:
+        - name: version
+          in: query
+          type: string
+          default: latest
+          description: |
+            The version of the Agent software to return. To get the "latest"
+            release, omit this parameter or specify "latest" as the version.
+            Versions are MAJOR.MINOR.SUBMINOR.SHA-RELEASE where major, minor,
+            and subminor are integers, sha is a hex string, and release can
+            be any string with no "-" or "." characters.
+      tags:
+        - Cellophane
+      responses:
+        200:
+          description: |
+            File download of the payload. File name will be
+            "cellophane-VERSION.rpm" where version is the version string that
+            the payload was uploaded with.
+          schema:
+            type: string
+            format: binary
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: Upload an Agent software package.
+      description: |
+        Upload a version of the Agent software package. This is for internal-use
+        of the container service.
+      parameters:
+        - name: version
+          in: query
+          required: true
+          type: string
+          description:
+            The version of the Agent software that is being uploaded. Versions
+            are MAJOR.MINOR.SUBMINOR.SHA-RELEASE where major, minor, and
+            subminor are integers, sha is a hex string, and release can be any
+            string with no "-" or "." characters.
+        - name: latest
+          in: query
+          default: false
+          type: boolean
+          description: |
+            If true, the uploaded version will be tagged as the latest version.
+            Downloads that don't request a specific version will receive the
+            current latest version. There is only one latest version at any
+            point in time.
+        - name: body
+          in: body
+          required: true
+          description: The body should be the raw byets of the package.
+          schema:
+            type: string
+            format: binary
+      tags:
+        - Cellophane
+      responses:
+        200:
+          description: Upload succeeded.
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+# TODO:
+# Same for placements
+
+# Config API
+# Snapshots, events, etc.
+# Version check
+
+definitions:
+  AgentInPool:
+    type: object
+    description: |
+      An Agent is a program that runs on a managed instance. It coordinates with
+      the container service to provision manage network interfaces, storage, and
+      other resources on the instance. It runs containers locally on the node
+      and reports their status to the container service.
+
+      TODO: fill this in!
+    properties:
+      id:
+        type: string
+      poolId:
+        description: |
+          The Capacity Pool an agent is assigned to. Once an agent is assigned
+          to a pool it will begin performing any work assigned by Services in
+          the Capacity Pool.
+        type: string
+
+  Tenant:
+    type: object
+    description: |
+      Tenant describes the global resources that a tenant owns under the
+      Skeppare service.
+    properties:
+      pools:
+        description: List of capacity pools
+        type: array
+        items:
+          $ref: '#/definitions/CapacityPoolSummary'
+
+  CapacityPoolSummary:
+    type: object
+    properties:
+      id:
+        type: string
+        description: Unique identifier for a capacity pool.
+      name:
+        type: string
+        description: |
+          Name of the capacity pool. Must be unique across all capacity pools.
+
+  CapacityPool:
+    type: object  
+    allOf:
+    - $ref: '#/definitions/CapacityPoolSummary'
+    - type: object
+      properties:
+        tenantId:
+          type: string
+          readOnly: true
+        instances:
+          type: array
+          description: IDs of instances that are part of this subnet.
+          items:
+            type: string
+        subnets:
+          type: array
+          items:
+            properties:
+              id:
+                type: string
+                description: Unique identifier for a subnet.
+              name:
+                type: string
+                description: Friendly name for a subnet.
+        services:
+          type: array
+          items:
+            properties:
+              id:
+                type: string
+                description: Unique identifier for a service.
+              name:
+                type: string
+                description: Friendly name for the service.
+
+  InstanceManageRequest:
+    type: object
+    description: Request body when POSTing to /v1/instances
+    properties:
+      poolId:
+        type: string
+        description: The pool to start the instance in.
+      pointer:
+        type: string
+        description: |
+          The ID of the instance to manage. On Oracle Bare Metal Cloud, this
+          should be an Oracle Cloud ID.
+  InstanceManageResponse:
+    type: object
+    allOf:
+    - $ref: '#/definitions/InstanceManageRequest'
+    - type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for a capacity pool.
+
+  SubnetCreate:
+    type: object
+    description: Request body when POSTing to /v1/subnets.
+    properties:
+      poolId:
+        type: string
+        description: The capacity pool this subnet should be created in.
+      name:
+        type: string
+        description: |
+          User friendly name for a subnet, must be unique in a capacity pool.
+      pointer:
+        type: string
+        description: |
+          The ID of the subnet to manage. On Oracle Bare Metal Cloud, this will
+          be the Oracle Cloud ID of the subnet.
+
+  Subnet:
+    type: object
+    description: A subnet is a VCN subnet with it's own security rules.
+    allOf:
+    - $ref: "#/definitions/SubnetCreate"
+    - type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier.
+          readOnly: true
+
+  Volume:
+    type: object
+    description: |
+      A volume is an object that stores data. Each volume may be attached to a
+      single instance at a time.
+    properties:
+      name:
+        type: string
+        description: Friendy name for a volume, must be unique in a service.
+      filesystem:
+        type: string
+        enum:
+          - ext3
+          - ext4
+        description: |
+          The filesystem that the volume is formatted with. Legal values are
+          "ext3" and "ext4".
+  Error:
+    type: object
+    properties:
+      errorCode:
+        type: string
+      errorMessage:
+        type: string
+
+  AddSubnetReq:
+    type: object
+    properties:
+      poolId:
+        items:
+          $ref: '#/definitions/PoolId'
+      subnetId:
+        items:
+          $ref: '#/definitions/SubnetId'
+  Agent:
+    type: object
+    description: An Agent is a program that runs on a managed instance. It coordinates with the container service to provision manage network interfaces, storage, and other resources on the instance. It runs containers locally on the node and reports their status to the container service.
+    properties:
+      id:
+        items:
+          $ref: '#/definitions/AgentId'
+      instanceId:
+        items:
+          $ref: '#/definitions/InstanceId'
+      cpu:
+        items:
+          $ref: '#/definitions/CPU'
+      mem:
+        items:
+          $ref: '#/definitions/Memory'
+  AgentId:
+    type: object
+    properties:
+      value:
+        type: string
+  AppId:
+    type: object
+    properties:
+      value:
+        type: string
+  AppInitialized:
+    type: object
+    properties:
+      name:
+        type: string
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  AppRemoved:
+    type: object
+    properties:
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  AvailabilityDomain:
+    type: object
+    properties:
+      name:
+        type: string
+      vcnId:
+        items:
+          $ref: '#/definitions/VcnId'
+  BSAttachmentId:
+    type: object
+    properties:
+      value:
+        type: string
+  Bandwidth:
+    type: object
+    properties:
+      bps:
+        type: number
+  BlockStoreAttached:
+    type: object
+    properties:
+      placementId:
+        items:
+          $ref: '#/definitions/PlacementId'
+      bsId:
+        items:
+          $ref: '#/definitions/VolumeId'
+      attachmentId:
+        items:
+          $ref: '#/definitions/BSAttachmentId'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  BlockStoreDetached:
+    type: object
+    properties:
+      placementId:
+        items:
+          $ref: '#/definitions/PlacementId'
+      bsId:
+        items:
+          $ref: '#/definitions/VolumeId'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  BlockStoreInfo:
+    type: object
+    properties:
+      attachmentId:
+        items:
+          $ref: '#/definitions/BSAttachmentId'
+  CPU:
+    type: object
+    properties:
+      freq:
+        items:
+          $ref: '#/definitions/CpuFreq'
+  Cidr:
+    type: object
+    properties:
+      ipAddr:
+        items:
+          $ref: '#/definitions/IpAddr'
+      prefix:
+        type: integer
+  Cog:
+    type: object
+    properties:
+      id:
+        items:
+          $ref: '#/definitions/CogId'
+      rev:
+        items:
+          $ref: '#/definitions/Revision'
+      name:
+        type: string
+      containers:
+        description: List of containers.
+        type: array
+        items:
+          items:
+            $ref: '#/definitions/Container'
+      tags:
+        type: array
+        items:
+          items:
+            $ref: '#/definitions/Tag'
+  CogId:
+    type: object
+    properties:
+      value:
+        type: string
+  CogResources:
+    type: object
+    properties:
+      volumes:
+        type: object
+        additionalProperties:
+          type: string
+          enum:
+            - BlockStorage
+            - Ephemeral
+      flip:
+        type: boolean
+  CogStatus:
+    type: object
+    properties:
+      state:
+        type: string
+        enum:
+          - Failed
+          - Initial
+          - Pending
+          - Inactive
+          - Running
+      containerStatusMap:
+        type: object
+        additionalProperties:
+          items:
+            $ref: '#/definitions/ContainerStatus'
+  CommandId:
+    type: object
+    properties:
+      value:
+        type: string
+  CompartmentId:
+    type: object
+    properties:
+      value:
+        type: string
+  Container:
+    type: object
+    properties:
+      name:
+        type: string
+      image:
+        description: URL of the image.
+        items:
+          $ref: '#/definitions/ContainerImageId'
+      commands:
+        type: array
+        items:
+          type: string
+      workingDir:
+        type: string
+      env:
+        type: object
+        additionalProperties:
+          type: string
+      resources:
+        items:
+          $ref: '#/definitions/NodeResources'
+      tags:
+        type: array
+        items:
+          items:
+            $ref: '#/definitions/Tag'
+      volumeMounts:
+        type: object
+        additionalProperties:
+          items:
+            $ref: '#/definitions/VolumeMount'
+  ContainerImageId:
+    type: object
+    properties:
+      url:
+        type: string
+  ContainerStatus:
+    type: object
+    properties:
+      state:
+        type: string
+        enum:
+          - Lost
+          - Initial
+          - Forked
+          - Running
+          - Scheduled
+          - Success
+          - Failed
+      pid:
+        type: integer
+      exitCode:
+        type: integer
+  CpuFreq:
+    type: object
+    properties:
+      hz:
+        type: number
+  CreateServiceReq:
+    type: object
+    properties:
+      poolId:
+        description: Capacity Pool under which this service should be created.
+        items:
+          $ref: '#/definitions/PoolId'
+      name:
+        description: Friendly name of the service, must be unique across the capacity pool.
+        type: string
+  Disk:
+    type: object
+    properties:
+      storage:
+        items:
+          $ref: '#/definitions/Storage'
+  FlipId:
+    type: object
+    properties:
+      value:
+        type: string
+  ImageId:
+    type: object
+    properties:
+      value:
+        type: string
+  Instance:
+    type: object
+    properties:
+      id:
+        items:
+          $ref: '#/definitions/InstanceId'
+      poolId:
+        items:
+          $ref: '#/definitions/PoolId'
+      displayName:
+        type: string
+      desc:
+        items:
+          $ref: '#/definitions/InstanceDetail'
+      maintenanceMode:
+        type: boolean
+      state:
+        type: string
+        enum:
+          - Stopped
+          - Starting
+          - Unknown
+          - Provisioning
+          - Stopping
+          - Running
+          - Terminated
+          - Terminating
+          - CreatingImage
+  InstanceDetail:
+    type: object
+    properties:
+      vcnId:
+        items:
+          $ref: '#/definitions/VcnId'
+      ad:
+        items:
+          $ref: '#/definitions/AvailabilityDomain'
+      shape:
+        type: string
+        enum:
+          - X5
+      os:
+        items:
+          $ref: '#/definitions/ImageId'
+      storageClass:
+        type: string
+        enum:
+          - BlockStorage
+          - NVMe
+      storage:
+        items:
+          $ref: '#/definitions/Storage'
+      metadata:
+        type: object
+        additionalProperties:
+          type: string
+  InstanceId:
+    type: object
+    properties:
+      value:
+        type: string
+  InstanceLaunchedResp:
+    type: object
+    properties:
+      instanceId:
+        items:
+          $ref: '#/definitions/InstanceId'
+  IpAddr:
+    type: object
+    properties:
+      value:
+        type: string
+  LaunchInstanceReq:
+    type: object
+    properties:
+      poolId:
+        items:
+          $ref: '#/definitions/PoolId'
+      displayName:
+        type: string
+      shape:
+        type: string
+        enum:
+          - X5
+      osImgId:
+        items:
+          $ref: '#/definitions/ImageId'
+      storageClass:
+        type: string
+        enum:
+          - BlockStorage
+          - NVMe
+      storage:
+        items:
+          $ref: '#/definitions/Storage'
+      ad:
+        items:
+          $ref: '#/definitions/AvailabilityDomain'
+      metadata:
+        type: object
+        additionalProperties:
+          type: string
+  MacAddr:
+    type: object
+    properties:
+      value:
+        type: string
+  Memory:
+    type: object
+    properties:
+      space:
+        items:
+          $ref: '#/definitions/Storage'
+  NetworkBandwidth:
+    type: object
+    properties:
+      bandwidth:
+        items:
+          $ref: '#/definitions/Bandwidth'
+  NetworkResource:
+    type: object
+    properties:
+      vnicId:
+        items:
+          $ref: '#/definitions/VnicId'
+      overlayIpCidr:
+        items:
+          $ref: '#/definitions/Cidr'
+      overlayMac:
+        items:
+          $ref: '#/definitions/MacAddr'
+      vlanTag:
+        items:
+          $ref: '#/definitions/VlanTag'
+      gatewayIp:
+        items:
+          $ref: '#/definitions/IpAddr'
+  NodeId:
+    type: object
+    properties:
+      value:
+        type: string
+  NodeInfo:
+    type: object
+    properties:
+      agentVersion:
+        type: string
+      kernelName:
+        type: string
+      kernelRelease:
+        type: string
+      kernelVersion:
+        type: string
+      arch:
+        type: string
+  NodeResourceUtil:
+    type: object
+    properties:
+      allocs:
+        items:
+          $ref: '#/definitions/NodeResources'
+      capacity:
+        items:
+          $ref: '#/definitions/NodeResources'
+  NodeResources:
+    type: object
+    properties:
+      cpu:
+        type: number
+      memoryGB:
+        type: number
+      disk:
+        items:
+          $ref: '#/definitions/Disk'
+      network:
+        items:
+          $ref: '#/definitions/NetworkBandwidth'
+  PlacementCreated:
+    type: object
+    properties:
+      replicaId:
+        items:
+          $ref: '#/definitions/ReplicaId'
+      placementId:
+        items:
+          $ref: '#/definitions/PlacementId'
+      agentId:
+        items:
+          $ref: '#/definitions/AgentId'
+      instanceId:
+        items:
+          $ref: '#/definitions/InstanceId'
+      networkResource:
+        items:
+          $ref: '#/definitions/NetworkResource'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  PlacementId:
+    type: object
+    properties:
+      value:
+        type: string
+  PlacementReady:
+    type: object
+    properties:
+      placementId:
+        items:
+          $ref: '#/definitions/PlacementId'
+      agentId:
+        items:
+          $ref: '#/definitions/AgentId'
+      cog:
+        items:
+          $ref: '#/definitions/Cog'
+      networkResource:
+        items:
+          $ref: '#/definitions/NetworkResource'
+      blockStoreInfo:
+        type: object
+        additionalProperties:
+          items:
+            $ref: '#/definitions/BlockStoreInfo'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  PlacementRemoved:
+    type: object
+    properties:
+      placementId:
+        items:
+          $ref: '#/definitions/PlacementId'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  PlacementStopRequested:
+    type: object
+    properties:
+      placementId:
+        items:
+          $ref: '#/definitions/PlacementId'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  PoolCreated:
+    type: object
+    properties:
+      tenantId:
+        items:
+          $ref: '#/definitions/TenantId'
+      poolId:
+        items:
+          $ref: '#/definitions/PoolId'
+      vcnId:
+        items:
+          $ref: '#/definitions/VcnId'
+      name:
+        type: string
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      timestamp:
+        type: string
+  PoolId:
+    type: object
+    properties:
+      value:
+        type: string
+  PoolRemoved:
+    type: object
+    properties:
+      poolId:
+        items:
+          $ref: '#/definitions/PoolId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      timestamp:
+        type: string
+  Principal:
+    type: object
+    properties:
+      tenantId:
+        items:
+          $ref: '#/definitions/TenantId'
+      subjectId:
+        items:
+          $ref: '#/definitions/SubjectId'
+  ReplicaCreated:
+    type: object
+    properties:
+      serviceId:
+        items:
+          $ref: '#/definitions/ServiceId'
+      replicaId:
+        items:
+          $ref: '#/definitions/ReplicaId'
+      blockStores:
+        type: object
+        additionalProperties:
+          items:
+            $ref: '#/definitions/VolumeId'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  ReplicaId:
+    type: object
+    properties:
+      value:
+        type: string
+  ReplicaRemoved:
+    type: object
+    properties:
+      replicaId:
+        items:
+          $ref: '#/definitions/ReplicaId'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  Revision:
+    type: object
+    properties:
+      value:
+        type: integer
+  Service:
+    type: object
+    properties:
+      id:
+        items:
+          $ref: '#/definitions/ServiceId'
+      name:
+        description: Friendly name of the service, must be unique across the capacity pool.
+        type: string
+      cogId:
+        description: ID of the cog to run.
+        items:
+          $ref: '#/definitions/CogId'
+      cogRev:
+        description: Rev of the cog to run.
+        items:
+          $ref: '#/definitions/Revision'
+  ServiceCreated:
+    type: object
+    properties:
+      appId:
+        items:
+          $ref: '#/definitions/AppId'
+      name:
+        type: string
+      serviceId:
+        items:
+          $ref: '#/definitions/ServiceId'
+      cog:
+        items:
+          $ref: '#/definitions/Cog'
+      cogResources:
+        items:
+          $ref: '#/definitions/CogResources'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  ServiceCreatedResp:
+    type: object
+    properties:
+      serviceId:
+        items:
+          $ref: '#/definitions/ServiceId'
+      url:
+        type: string
+  ServiceId:
+    type: object
+    properties:
+      value:
+        type: string
+  ServiceRemoved:
+    type: object
+    properties:
+      serviceId:
+        items:
+          $ref: '#/definitions/ServiceId'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      timestamp:
+        type: string
+  Storage:
+    type: object
+    properties:
+      bytes:
+        type: number
+  SubjectId:
+    type: object
+    properties:
+      value:
+        type: string
+  SubnetAdded:
+    type: object
+    properties:
+      poolId:
+        items:
+          $ref: '#/definitions/PoolId'
+      subnetId:
+        items:
+          $ref: '#/definitions/SubnetId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      timestamp:
+        type: string
+  SubnetId:
+    type: object
+    properties:
+      value:
+        type: string
+  SubnetRemoved:
+    type: object
+    properties:
+      poolId:
+        items:
+          $ref: '#/definitions/PoolId'
+      subnetId:
+        items:
+          $ref: '#/definitions/SubnetId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      timestamp:
+        type: string
+  Tag:
+    type: object
+    properties:
+      value:
+        type: string
+  TenantId:
+    type: object
+    properties:
+      value:
+        type: string
+  TenantOptedIn:
+    type: object
+    properties:
+      tenantId:
+        items:
+          $ref: '#/definitions/TenantId'
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      timestamp:
+        type: string
+  TenantOptedOut:
+    type: object
+    properties:
+      principal:
+        items:
+          $ref: '#/definitions/Principal'
+      cmdId:
+        items:
+          $ref: '#/definitions/CommandId'
+      timestamp:
+        type: string
+  VcnId:
+    type: object
+    properties:
+      value:
+        type: string
+  VlanTag:
+    type: object
+    properties:
+      value:
+        type: integer
+  Vnic:
+    type: object
+    properties:
+      id:
+        items:
+          $ref: '#/definitions/VnicId'
+      compartmentId:
+        items:
+          $ref: '#/definitions/CompartmentId'
+      displayName:
+        type: string
+      subnetId:
+        items:
+          $ref: '#/definitions/SubnetId'
+      internalAvailabilityDomain:
+        type: string
+      overlayIp:
+        items:
+          $ref: '#/definitions/IpAddr'
+      publicIp:
+        items:
+          $ref: '#/definitions/IpAddr'
+      hasFloatingIP:
+        type: boolean
+      overlayMac:
+        items:
+          $ref: '#/definitions/MacAddr'
+      isPrimaryVnic:
+        type: boolean
+      ownerId:
+        type: string
+      state:
+        type: string
+      timeCreated:
+        type: string
+      subnetCidr:
+        items:
+          $ref: '#/definitions/Cidr'
+      virtualRouterIp:
+        items:
+          $ref: '#/definitions/IpAddr'
+  VnicAttachment:
+    type: object
+    properties:
+      vnicId:
+        items:
+          $ref: '#/definitions/VnicId'
+      compartmentId:
+        items:
+          $ref: '#/definitions/CompartmentId'
+      displayName:
+        type: string
+      instanceId:
+        items:
+          $ref: '#/definitions/NodeId'
+      internalAvailabilityDomain:
+        type: string
+      substrateIp:
+        items:
+          $ref: '#/definitions/IpAddr'
+      natIp:
+        items:
+          $ref: '#/definitions/IpAddr'
+      overlayMac:
+        items:
+          $ref: '#/definitions/MacAddr'
+      slotId:
+        type: integer
+      vlanTag:
+        items:
+          $ref: '#/definitions/VlanTag'
+      vnicShape:
+        type: string
+      state:
+        type: string
+      timeCreated:
+        type: string
+  VnicId:
+    type: object
+    properties:
+      value:
+        type: string
+  VolumeId:
+    type: object
+    properties:
+      value:
+        type: string
+  VolumeMount:
+    type: object
+    properties:
+      volumePath:
+        type: string
+      containerPath:
+        type: string

@@ -50,6 +50,7 @@ RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 #   improved, please open an issue or a pull request so we can discuss it!
 
 COPY swagger-codegen-cli.jar .
+COPY .swagger-codegen-ignore .
 
 COPY Server.py .
 

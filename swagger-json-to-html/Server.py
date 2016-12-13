@@ -1,6 +1,7 @@
 #!/usr/bin/env python
  
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import subprocess
  
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
@@ -17,8 +18,22 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         # Send message back to client
         # message = "Hello world!"
         message = self.rfile.read(int(self.headers['Content-Length'])).decode('utf-8')
+
+	# Write it to a file
+        file = open('swagger.json', 'w')
+        file.truncate()
+        file.write(message)
+        file.close()
+
+        # Call codegen to generate HTML 
+        subprocess.call(["java", "-jar", "swagger-codegen-cli.jar", "generate", "-i", "swagger.json", "-l", "html", "-o", "."])
+		
+        # Read it from a file
+        inFile = open('index.html', 'r')
+        json = inFile.read()
+
         # Write content as utf-8 data
-        self.wfile.write(bytes(message, "utf8"))
+        self.wfile.write(bytes(json, "utf8"))
         return
  
 def run():
