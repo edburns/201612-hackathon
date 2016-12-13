@@ -1,0 +1,10 @@
+{
+  "yaml2json": {
+    "host": "localhost",
+    "port": 3001
+  },
+  "json2html": {
+    "host": "localhost",
+    "port": 3002
+  }
+}
