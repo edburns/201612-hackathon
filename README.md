@@ -34,8 +34,17 @@ docker tag swagger-json-to-html gcr.io/hackathon-201612/swagger-json-to-html
 
 Interacting with Kubernetes
 ===========================
+https://cloud.google.com/container-engine/docs/quickstart
 
-kubectl run <application_name> --image=<image_name> --port=<port_number> --env="DOMAIN=cluster"
-kubectl expose deployment <application_name> --port=<port_number> --name=<service_name> --type="LoadBalancer"
+gcloud config set compute/zone us-central1-b
 
+gcloud container clusters create hackathon-201612
 
+kubectl run <service_name>-app --image=gcr.io/hackathon-201612/<service_name> --port=<port_number> --env="DOMAIN=cluster"
+kubectl expose deployment <service_name>-app --port=<port_number> --name=<service_name> --type="LoadBalancer"
+
+kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=8080
+
+edburns@hackathon-201612:~$ kubectl expose deployment swagger-yaml-to-json-app --port=8080 --name=swagger-yaml-to-json
+
+kubectl get service swagger-yaml-to-json
