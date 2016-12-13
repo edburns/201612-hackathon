@@ -1,0 +1,118 @@
+    1  gcloud config set compute/zone us-central1-b
+    2  gcloud config list
+    3  gcloud container clusters create example-cluster
+    4  gcloud config list
+    5  gcloud container clusters create example-cluster
+    6  gcloud auth application-default login
+    7  kubectl run hello-node --image=gcr.io/google-samples/node-hello:1.0 --port=8080
+    8  kubectl expose deployment hello-node --type="LoadBalancer"
+    9  kubectl get service hello-node
+   10  gcloud container clusters delete example-cluster
+   11  gcloud compute instances create INSTANCE   --scopes https://www.googleapis.com/auth/devstorage.read_write
+   12  gcloud compute instances create INSTANCE --scopes https://www.googleapis.com/auth/devstorage.read_write
+   13  docker images
+   14  docker pull gcr.io/hackathon-201612/swagger-yaml-to-json
+   15  gcloud compute instances create INSTANCE --scopes https://www.googleapis.com/auth/devstorage.read_write
+   16  gcloud docker pull -- gcr.io/hackathon-201612/swagger-yaml-to-json
+   17  gcloud docker pull gcr.io/hackathon-201612/swagger-yaml-to-json
+   18  gcloud -- docker pull gcr.io/hackathon-201612/swagger-yaml-to-json
+   19  gcloud docker
+   20  gcloud docker search
+   21  gcloud docker search gcr.io/hackathon-201612/swagger-yaml-to-json
+   22  gcloud docker pull gcr.io/hackathon-201612/swagger-yaml-to-json
+   23  gcloud docker search gcr.io/hackathon-201612/swagger-yaml-to-json
+   24  gcloud docker search hackathon-201612/swagger-yaml-to-json
+   25  gcloud docker pull hackathon-201612/swagger-yaml-to-json
+   26  gcloud docker gcr.iopull hackathon-201612/swagger-yaml-to-json
+   27  gcloud docker pull gcr.io/hackathon-201612/swagger-yaml-to-json
+   28  gcloud beta container images list
+   29  gcloud beta container images list-tags
+   30  gcloud beta container images list-tags gcr.io/hackathon-201612/swagger-yaml-to-json
+   31  gcloud docker pull gcr.io/hackathon-201612/swagger-yaml-to-json:latest   32  kubectl run --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=8080 --env="DOMAIN=cluster"
+   33  kubectl run --image=gcr.io/hackathon-201612/swagger-yaml-to-json swagger-yaml-to-json-app --port=8080 --env="DOMAIN=clu
+ster"
+   34  kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=8080 --env="DOMAIN=clu
+ster"
+   35  kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yaml-to-json
+   36  kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=68080 --env="DOMAIN=cl
+uster"
+   37  gcloud config 
+   38  gcloud config list
+   39  gcloud config set compute/zone us-central1-b
+   40  gcloud config list
+   41  gcloud container clusters create hackathon-201612
+   42  gcloud auth application-default login
+   43  kubectl run --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=8080
+   44  kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=8080
+   45  kubectl expose deployment swagger-yaml-to-json-app --port=8080 --name=swagger-yaml-to-json
+   46  kubectl get service swagger-yaml-to-json
+   47  kubectl expose deployment hello-node --type="LoadBalancer"
+   48  kubectl expose deployment swagger-yaml-to-json --type="LoadBalancer"
+   49  kubectl expose deployment swagger-yaml-to-json-app --type="LoadBalancer"
+   50  kubectl get service swagger-yaml-to-json
+   51  kubectl expose deployment swagger-yaml-to-json-app --type="LoadBalancer" --port=8080
+   52  kubectl get service swagger-yaml-to-json
+   53  kubectl delete swagger-yaml-to-json
+   54  kubectl delete swagger-yaml-to-json-app
+   55  kubectl delete swagger-yaml-to-json --all
+   56  kubectl delete swagger-yaml-to-json-app --all
+   57  kubectl list 
+   58  kubectl delete service swagger-yaml-to-json
+   59  kubectl delete service swagger-yaml-to-json-app
+   60  kubectl expose deployment swagger-yaml-to-json-app --port=8080 --name=swagger-yaml-to-json --type="LoadBalancer"
+   61  kubectl get service swagger-yaml-to-json
+   62  kubectl run swagger-json-to-html-app --image gcr.io/hackathon-201612/swagger-yaml-to-json --port=8081
+   63  kubectl expose deployment swagger-json-to-html-app --port=8081 --name=swagger-json-to-html --type="LoadBalancer"
+   64  kubectl get service swagger-json-to-html
+   65  kubectl delete service swagger-json-to-html
+   66  kubectl list
+   67  kubectl get swagger-json-to-html
+   68  kubectl get 
+   69  kubectl get services
+   70  kubectl expose deployment swagger-json-to-html-app --port=8081 --name=swagger-json-to-html --type="LoadBalancer"
+   71  kubectl get services
+   72  kubectl get apps
+   73  kubectl get app
+   74  kubectl get nodes
+   75  kubectl get services
+   76  kubectl get pods
+   77  kubectl logs swagger-json-to-html-app-4204385698-wdx9h
+   78  kubectl logs swagger-yaml-to-json-app-3749959069-hey7m
+   79  kubectl delete service swagger-json-to-html
+   80  kubectl delete pod swagger-json-to-html-app
+   81  kubectl delete service swagger-json-to-html-app
+   82  kubectl get pods
+   83  kubectl delete pod swagger-json-to-html-app-4204385698-wdx9h
+   84  kubectl status
+   85  kubectl get pods
+   86  kubectl logs swagger-json-to-html-app-4204385698-u8tk3
+   87  kubectl delete swagger-json-to-html-app
+   88  kubectl delete swagger-json-to-html
+   89  kubectl delete swagger-json-to-html-app
+   90  kubectl delete pods --all
+   91  kubectl list pods
+   92  kubectl get pods
+   93  kubectl logs swagger-yaml-to-json-app-3749959069-gcuz6
+   94  kubectl logs swagger-json-to-html-app-4204385698-m0896
+   95  kubectl delete pods --all --now
+   96  kubectl get pods
+   97  kubectl delete deployment swagger-json-to-html-app
+   98  kubectl delete deployment swagger-yaml-to-json-app
+   99  kubectl get pods
+  100  kubectl run swagger-json-to-html-app --image=gcr.io/hackathon-201612/swagger-json-to-html --port=8081 --env="DOMAIN=clu
+ster"
+  101  kubectl expose deployment swagger-json-to-html-app --port=8081 --name=swagger-json-to-html --type="LoadBalancer"
+  102  kubectl get pods
+  103  kubectl get services
+  104  kubectl delete service swagger-yaml-to-json
+  105  kubectl get services
+  106  kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=8081 --env="DOMAIN=clu
+ster"
+  107  kubectl get pods
+  108  kubectl delete deployment swagger-yaml-to-json-app
+  109  kubectl get pods
+  110  kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yaml-to-json --port=8080 --env="DOMAIN=clu
+ster"
+  111  kubectl expose deployment swagger-yaml-to-json-app --port=8080 --name=swagger-yaml-to-json --type="LoadBalancer"
+  112  kubectl get services
+  113  history
