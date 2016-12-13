@@ -35,6 +35,7 @@ docker tag swagger-json-to-html gcr.io/hackathon-201612/swagger-json-to-html
 Interacting with Kubernetes
 ===========================
 
-kubectl run --image=<image_name> <application_name> --port=<port_number> --env="DOMAIN=cluster"
-kubectl expose deployment <application_name> --port=<port_number> --name=<service_name>
+kubectl run <application_name> --image=<image_name> --port=<port_number> --env="DOMAIN=cluster"
+kubectl expose deployment <application_name> --port=<port_number> --name=<service_name> --type="LoadBalancer"
+
 
