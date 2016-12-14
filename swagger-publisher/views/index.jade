@@ -1,7 +1,12 @@
 extends layout
 
 block content
-  h1= titl
+  h1 Swagger Publisher (Hackathon 2016)
+  p#note Publish your Swagger file onto the Google cloud, uploading files in YAML, JSON or HTML. The application comprises 3 microservices: yaml-to-json converter, json-to-html converter and this publisher portal. All microservices are deployed as Docker containers using Kubernetes.
+
   form(action="publish", method="post", enctype="multipart/form-data")
     input(type="file", name="swaggerFile")
     input(type="submit", name="Upload")
+
+  hr
+  sup Created by Ed, Manfred and Santiago
