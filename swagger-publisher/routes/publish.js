@@ -52,7 +52,7 @@ router.post('/', upload.single('swaggerFile'), function(req, res) {
             });
         });
     }
-    else if (contentType.includes("yaml")) {
+    else if (contentType.includes("yaml") || req.file.originalname.includes("yaml")) {
         console.log("Uploading file as YAML " + JSON.stringify(req.file));
 
         var args = {
@@ -79,7 +79,7 @@ router.post('/', upload.single('swaggerFile'), function(req, res) {
         });
     }
     else {
-        res.status(400).send("Invalid content type");
+        res.status(400).send("Invalid content type: " + req.file.mimetype);
     }
 });
 

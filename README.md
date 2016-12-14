@@ -5,12 +5,16 @@ docker build -t swagger-yaml-to-json .
 
 docker build -t swagger-json-to-html .
 
+docker build -t swagger-publisher .
+
 Running the Docker Images Locally
 =================================
 
 docker run -p 8080:8080 -it --rm swagger-yaml-to-json
 
 docker run -p 8081:8081 -it --rm swagger-json-to-html
+
+docker run -p 8888:888 -it --rm swagger-publisher
 
 Interacting with the Running Local Docker Images
 ================================================

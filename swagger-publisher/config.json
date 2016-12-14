@@ -2,11 +2,11 @@
   "yaml2json": {
     "host": "localhost",
     "port": 8080,
-    "url": "http://localhost:8080"
+    "url": "http://104.154.171.202:8080"
   },
   "json2html": {
     "host": "localhost",
     "port": 8081,
-    "url": "http://localhost:8081"
+    "url": "http://104.154.26.190:8081"
   }
 }
