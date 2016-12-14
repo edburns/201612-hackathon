@@ -32,9 +32,13 @@ docker tag swagger-yaml-to-json gcr.io/hackathon-201612/swagger-yaml-to-json
 
 docker tag swagger-json-to-html gcr.io/hackathon-201612/swagger-json-to-html
 
+docker tag swagger-publisher gcr.io/hackathon-201612/swagger-publisher
+
 ./gcloud docker -- push gcr.io/hackathon-201612/swagger-yaml-to-json
 
 ./gcloud docker -- push gcr.io/hackathon-201612/swagger-json-to-html
+
+./gcloud docker -- push gcr.io/hackathon-201612/swagger-publisher
 
 Interacting with Kubernetes
 ===========================
@@ -52,3 +56,7 @@ kubectl run swagger-yaml-to-json-app --image=gcr.io/hackathon-201612/swagger-yam
 edburns@hackathon-201612:~$ kubectl expose deployment swagger-yaml-to-json-app --port=8080 --name=swagger-yaml-to-json
 
 kubectl get service swagger-yaml-to-json
+
+
+run swagger-publisher-app --image=gcr.io/hackathon-201612/swagger-publisher --port=3000 --env="DOMAI
+N=cluster"
